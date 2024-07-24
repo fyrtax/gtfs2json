@@ -1,28 +1,17 @@
-// hard-coded files in structure map
-// TripUpdate_A : [type:'protobuf', filename:'TripUpdates_T.pb', mod_time: 0, vehicle: 'bus'] ...
-// check if file is in map, else throw error and then 404
-// if exists then request with Last-Modified header to server
-
-// files:
-// TripUpdates_A.pb
-// TripUpdates_T.pb
-// ServiceAlerts_A.pb
-// ServiceAlerts_T.pb
-// VehiclePositions_A.pb
-// VehiclePositions_T.pb
-// GTFS_KRK_A.zip
-// GTFS_KRK_T.zip
-
 package main
 
 import (
+	_ "embed"
+	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
-// pass it to the interface
-const GTFS_SERVER = "https://gtfs.ztp.krakow.pl/"
+//go:embed templates/list_files.gohtml
+var listFilesTemplate string
 
 type GtfsProxyStore interface {
 	UpdateFile(name string, time int64)
@@ -32,62 +21,83 @@ type GtfsProxyStore interface {
 }
 
 type GtfsProxyServer struct {
-	store GtfsProxyStore
+	store    GtfsProxyStore
+	template *template.Template
 	http.Handler
 }
 
 type GtfsFile struct {
-	Type     string
-	Filename string
-	ModTime  int64
-	Vehicle  string
+	Type          string
+	Filename      string
+	LastChecked   time.Time
+	ModTime       time.Time
+	Vehicle       string
+	FormattedTime string
 }
 
 type GtfsServerFiles map[string]GtfsFile
 
-const jsonContentType = "application/json"
+const GTFS_SERVER = "https://gtfs.ztp.krakow.pl/"
 
 func NewProxyServer(store GtfsProxyStore) (*GtfsProxyServer, error) {
 	p := new(GtfsProxyServer)
 
 	p.store = store
 
+	// Load the template
+	tmpl, err := template.New("list_files").Parse(listFilesTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("error loading template: %v", err)
+	}
+	p.template = tmpl
+
 	router := http.NewServeMux()
-	router.Handle("/league", http.HandlerFunc(p.leagueHandler))
-	router.Handle("/players/", http.HandlerFunc(p.playersHandler))
+
+	router.Handle("/", http.HandlerFunc(p.indexHandler))
+	router.Handle("/ping", http.HandlerFunc(p.pingHandler))
 
 	p.Handler = router
 
 	return p, nil
 }
 
-func (p *GtfsProxyServer) leagueHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("content-type", jsonContentType)
-	//json.NewEncoder(w).Encode(p.store.GetLeague())
+func (p *GtfsProxyServer) pingHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, "pong")
 }
 
-func (p *GtfsProxyServer) playersHandler(w http.ResponseWriter, r *http.Request) {
-	player := strings.TrimPrefix(r.URL.Path, "/players/")
+func (p *GtfsProxyServer) indexHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.URL.Path)
 
-	switch r.Method {
-	case http.MethodPost:
-		p.processWin(w, player)
-	case http.MethodGet:
-		p.showScore(w, player)
+	if p.handleGtfsRequest(w, r) {
+		return
+	}
+
+	// return templates/gtfs_files.gohtml
+	err := p.template.ExecuteTemplate(w, "list_files", gtfsFiles)
+	if err != nil {
+		fmt.Println("error executing template", err)
 	}
 }
 
-func (p *GtfsProxyServer) showScore(w http.ResponseWriter, player string) {
-	//score := p.store.GetPlayerScore(player)
-	//
-	//if score == 0 {
-	//	w.WriteHeader(http.StatusNotFound)
-	//}
-	//
-	//fmt.Fprint(w, score)
-}
+func (p *GtfsProxyServer) handleGtfsRequest(w http.ResponseWriter, r *http.Request) bool {
+	fileRequested := strings.TrimPrefix(r.URL.Path, "/")
 
-func (p *GtfsProxyServer) processWin(w http.ResponseWriter, player string) {
-	//p.store.RecordWin(player)
-	//w.WriteHeader(http.StatusAccepted)
+	// write the requested file to the response
+	file, err := p.store.GetFile(fileRequested)
+
+	if err != nil {
+		// file not found
+		return false
+	} else {
+		// set header last modified
+		fileDetails := p.store.GetFileDetails(fileRequested)
+		w.Header().Set("Last-Modified", fileDetails.ModTime.Format(time.RFC1123))
+
+		_, err := io.Copy(w, file)
+		if err != nil {
+			http.Error(w, "error copying file to response", http.StatusInternalServerError)
+		}
+		return true
+	}
 }

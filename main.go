@@ -45,5 +45,7 @@ func main() {
 		log.Fatalf("problem creating gtfs proxy server %v", err)
 	}
 
+	// print server link
+	println("Server is running on http://localhost:5000")
 	log.Fatal(http.ListenAndServe(":5000", server))
 }

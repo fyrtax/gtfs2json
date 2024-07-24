@@ -2,15 +2,28 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"time"
 )
 
 // FileSystemGtfsStore stores gtfs files details in the filesystem.
 type FileSystemGtfsStore struct {
 	database *json.Encoder
 	files    map[string]GtfsFile
+}
+
+var gtfsFiles = GtfsServerFiles{
+	"TripUpdates_A":      {Type: "protobuf", Filename: "TripUpdates_T.pb", LastChecked: time.Unix(0, 0), ModTime: time.Unix(0, 0), Vehicle: "A", FormattedTime: time.Unix(0, 0).Format(time.DateTime)},
+	"TripUpdates_T":      {Type: "protobuf", Filename: "TripUpdates_T.pb", LastChecked: time.Unix(0, 0), ModTime: time.Unix(0, 0), Vehicle: "T", FormattedTime: time.Unix(0, 0).Format(time.DateTime)},
+	"ServiceAlerts_A":    {Type: "protobuf", Filename: "ServiceAlerts_A.pb", LastChecked: time.Unix(0, 0), ModTime: time.Unix(0, 0), Vehicle: "A", FormattedTime: time.Unix(0, 0).Format(time.DateTime)},
+	"ServiceAlerts_T":    {Type: "protobuf", Filename: "ServiceAlerts_T.pb", LastChecked: time.Unix(0, 0), ModTime: time.Unix(0, 0), Vehicle: "T", FormattedTime: time.Unix(0, 0).Format(time.DateTime)},
+	"VehiclePositions_A": {Type: "protobuf", Filename: "VehiclePositions_A.pb", LastChecked: time.Unix(0, 0), ModTime: time.Unix(0, 0), Vehicle: "A", FormattedTime: time.Unix(0, 0).Format(time.DateTime)},
+	"VehiclePositions_T": {Type: "protobuf", Filename: "VehiclePositions_T.pb", LastChecked: time.Unix(0, 0), ModTime: time.Unix(0, 0), Vehicle: "T", FormattedTime: time.Unix(0, 0).Format(time.DateTime)},
+	"GTFS_KRK_A":         {Type: "zip", Filename: "GTFS_KRK_A.zip", LastChecked: time.Unix(0, 0), ModTime: time.Unix(0, 0), Vehicle: "A", FormattedTime: time.Unix(0, 0).Format(time.DateTime)},
+	"GTFS_KRK_T":         {Type: "zip", Filename: "GTFS_KRK_T.zip", LastChecked: time.Unix(0, 0), ModTime: time.Unix(0, 0), Vehicle: "T", FormattedTime: time.Unix(0, 0).Format(time.DateTime)},
 }
 
 // FileSystemGtfsStoreFromFile creates a GtfsProxyStore from the contents of a JSON file found at path.
@@ -57,7 +70,13 @@ func initialiseGtfsDBFile(file *os.File) error {
 	}
 
 	if info.Size() == 0 {
-		file.Write([]byte("[]"))
+		// write gtfsFiles as json to file
+		err = json.NewEncoder(file).Encode(gtfsFiles)
+
+		if err != nil {
+			return fmt.Errorf("problem encoding gtfs files to file %s, %v", file.Name(), err)
+		}
+
 		file.Seek(0, io.SeekStart)
 	}
 
@@ -88,6 +107,7 @@ func (f *FileSystemGtfsStore) SaveFile(name string, file io.Writer) error {
 
 // GetFile returns the file
 func (f *FileSystemGtfsStore) GetFile(name string) (io.Reader, error) {
-	//TODO implement me
-	panic("implement me")
+	// add close func to close file
+
+	return nil, errors.New("not implemented")
 }
