@@ -15,7 +15,7 @@ type FileSystemGtfsStore struct {
 	files    map[string]GtfsFile
 }
 
-var gtfsFiles = GtfsServerFiles{
+var initialGtfsFiles = GtfsServerFiles{
 	"TripUpdates_A":      {Type: "protobuf", Filename: "TripUpdates_T.pb", LastChecked: time.Unix(0, 0), ModTime: time.Unix(0, 0), Vehicle: "A", FormattedTime: time.Unix(0, 0).Format(time.DateTime)},
 	"TripUpdates_T":      {Type: "protobuf", Filename: "TripUpdates_T.pb", LastChecked: time.Unix(0, 0), ModTime: time.Unix(0, 0), Vehicle: "T", FormattedTime: time.Unix(0, 0).Format(time.DateTime)},
 	"ServiceAlerts_A":    {Type: "protobuf", Filename: "ServiceAlerts_A.pb", LastChecked: time.Unix(0, 0), ModTime: time.Unix(0, 0), Vehicle: "A", FormattedTime: time.Unix(0, 0).Format(time.DateTime)},
@@ -25,6 +25,8 @@ var gtfsFiles = GtfsServerFiles{
 	"GTFS_KRK_A":         {Type: "zip", Filename: "GTFS_KRK_A.zip", LastChecked: time.Unix(0, 0), ModTime: time.Unix(0, 0), Vehicle: "A", FormattedTime: time.Unix(0, 0).Format(time.DateTime)},
 	"GTFS_KRK_T":         {Type: "zip", Filename: "GTFS_KRK_T.zip", LastChecked: time.Unix(0, 0), ModTime: time.Unix(0, 0), Vehicle: "T", FormattedTime: time.Unix(0, 0).Format(time.DateTime)},
 }
+
+var gtfsFiles = map[string]GtfsFile{}
 
 // FileSystemGtfsStoreFromFile creates a GtfsProxyStore from the contents of a JSON file found at path.
 func FileSystemGtfsStoreFromFile(path string) (*FileSystemGtfsStore, func(), error) {
@@ -70,17 +72,23 @@ func initialiseGtfsDBFile(file *os.File) error {
 	}
 
 	if info.Size() == 0 {
-		// write gtfsFiles as json to file
-		err = json.NewEncoder(file).Encode(gtfsFiles)
+		// write initialGtfsFiles as json to file
+		err = json.NewEncoder(file).Encode(initialGtfsFiles)
 
 		if err != nil {
 			return fmt.Errorf("problem encoding gtfs files to file %s, %v", file.Name(), err)
 		}
 
 		file.Seek(0, io.SeekStart)
+	} else {
+		// read gtfsFiles from file
 	}
 
 	return nil
+}
+
+func (f *FileSystemGtfsStore) GetFullFileList() GtfsServerFiles {
+	return gtfsFiles
 }
 
 // UpdateFile updates the time of the file

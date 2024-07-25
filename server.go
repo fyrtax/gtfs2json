@@ -18,6 +18,7 @@ type GtfsProxyStore interface {
 	GetFileDetails(name string) GtfsFile
 	SaveFile(name string, file io.Writer) error
 	GetFile(name string) (io.Reader, error)
+	GetFullFileList() GtfsServerFiles
 }
 
 type GtfsProxyServer struct {
@@ -36,8 +37,6 @@ type GtfsFile struct {
 }
 
 type GtfsServerFiles map[string]GtfsFile
-
-const GTFS_SERVER = "https://gtfs.ztp.krakow.pl/"
 
 func NewProxyServer(store GtfsProxyStore) (*GtfsProxyServer, error) {
 	p := new(GtfsProxyServer)
@@ -61,9 +60,12 @@ func NewProxyServer(store GtfsProxyStore) (*GtfsProxyServer, error) {
 	return p, nil
 }
 
-func (p *GtfsProxyServer) pingHandler(w http.ResponseWriter, r *http.Request) {
+func (p *GtfsProxyServer) pingHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "pong")
+	_, err := fmt.Fprint(w, "pong")
+	if err != nil {
+		fmt.Println("error writing response", err)
+	}
 }
 
 func (p *GtfsProxyServer) indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -73,8 +75,7 @@ func (p *GtfsProxyServer) indexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// return templates/gtfs_files.gohtml
-	err := p.template.ExecuteTemplate(w, "list_files", gtfsFiles)
+	err := p.template.ExecuteTemplate(w, "list_files", p.store.GetFullFileList())
 	if err != nil {
 		fmt.Println("error executing template", err)
 	}
