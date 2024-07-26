@@ -2,10 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"google.golang.org/protobuf/proto"
 	gtfs "gtfs-proxy"
-	"log"
 	"os"
 )
 
@@ -15,57 +15,71 @@ import (
 // protoc --go_out=. --go_opt=paths=source_relative gtfs-realtime.proto
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Podaj nazwę pliku jako argument.")
+	help := flag.Bool("h", false, "Display help")
+	flag.Usage = printUsage
+	flag.Parse()
+
+	if *help {
+		flag.Usage()
 		return
 	}
 
-	fileName := os.Args[1]
-
-	// Otwarcie pliku
-	data, err := os.ReadFile(fileName)
-	if err != nil {
-		log.Fatal("Błąd podczas odczytu pliku:", err)
+	args := flag.Args()
+	if len(args) < 1 || len(args) > 2 {
+		fmt.Println("Invalid number of arguments")
+		flag.Usage()
+		os.Exit(1)
 	}
 
-	// Inicjalizacja struktury z pliku protobuffer
-	tripUpdate := gtfs.FeedMessage{}
-
-	// Deserializacja danych z pliku protobuffer
-	if err := proto.Unmarshal(data, &tripUpdate); err != nil {
-		log.Fatal("Błąd podczas deserializacji danych:", err)
+	inputFile, outputFile := args[0], ""
+	if len(args) == 2 {
+		outputFile = args[1]
 	}
 
-	// Tutaj można przekonwertować strukturę protobuffer na JSON używając MarshalJSON lub innych metod dostępnych w Twoich strukturach
-
-	// fmt.Println("Deserializacja zakończona pomyślnie!")
-
-	//enc := json.NewEncoder(os.Stdout)
-	//enc.Encode(tripUpdate)
-	//
-	//log.Println(tripUpdate)
-
-	//replace .pb with .json
-	fileName = fileName[:len(fileName)-2] + "json"
-	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0644)
-	_ = file.Truncate(0)
-
+	data, err := os.ReadFile(inputFile)
 	if err != nil {
-		log.Fatal("Cannot open output file:", err)
+		exitWithError("Error reading input file", err)
+	}
+
+	tripUpdate := &gtfs.FeedMessage{}
+	if err := proto.Unmarshal(data, tripUpdate); err != nil {
+		exitWithError("Error deserializing", err)
+	}
+
+	if outputFile == "" {
+		if err := json.NewEncoder(os.Stdout).Encode(tripUpdate); err != nil {
+			exitWithError("Error encoding to JSON", err)
+		}
+		return
+	}
+
+	file, err := os.Create(outputFile)
+	if err != nil {
+		exitWithError("Error creating output file", err)
 	}
 	defer func(file *os.File) {
 		err := file.Close()
 		if err != nil {
-			log.Fatal("Cannot close output file:", err)
+			exitWithError("Error closing output file", err)
 		}
 	}(file)
 
-	// save to json file
-	encoder := json.NewEncoder(file)
-	err = encoder.Encode(tripUpdate)
-	if err != nil {
-		log.Fatal("Cannot encode to JSON:", err)
+	if err := json.NewEncoder(file).Encode(tripUpdate); err != nil {
+		exitWithError("Error encoding to JSON", err)
 	}
+}
 
-	fmt.Println("Zapisano do pliku", fileName)
+func printUsage() {
+	fmt.Println("Converts a GTFS-realtime Protocol Buffer file to JSON")
+	fmt.Printf("Usage: %s [options] <input_file> [output_file]\n", os.Args[0])
+	fmt.Printf("Options:\n")
+	flag.PrintDefaults()
+	fmt.Printf("Arguments:\n")
+	fmt.Printf("\tinput_file\tPath to the .pb GTFS file to convert\n")
+	fmt.Printf("\toutput_file\t(Optional) Path to the output JSON file. If not provided, output is printed to stdout\n")
+}
+
+func exitWithError(message string, err error) {
+	fmt.Printf("%s: %v\n", message, err)
+	os.Exit(1)
 }
