@@ -1,4 +1,4 @@
-module gtfs-rt
+module gtfs-proxy
 
 go 1.20
 

@@ -1,4 +1,4 @@
-package main
+package gtfs_proxy
 
 import (
 	"io"
