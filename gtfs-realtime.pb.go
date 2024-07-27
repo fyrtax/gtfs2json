@@ -28,7 +28,7 @@
 // 	protoc        v3.21.12
 // source: gtfs-realtime.proto
 
-package gtfs_proxy
+package gtfs2json
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"

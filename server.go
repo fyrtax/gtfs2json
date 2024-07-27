@@ -1,4 +1,4 @@
-package gtfs_proxy
+package gtfs2json
 
 import (
 	_ "embed"

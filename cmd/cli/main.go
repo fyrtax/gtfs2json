@@ -11,7 +11,7 @@ import (
 
 // how to generate gtfs-realtime.pb.go
 // wget https://raw.githubusercontent.com/google/transit/master/gtfs-realtime/proto/gtfs-realtime.proto
-// add option go_package = "github.com/fyrtax/gtfs_proxy"; to gtfs-realtime.proto
+// add option go_package = "github.com/fyrtax/gtfs2json"; to gtfs-realtime.proto
 // protoc --go_out=. --go_opt=paths=source_relative gtfs-realtime.proto
 
 func main() {

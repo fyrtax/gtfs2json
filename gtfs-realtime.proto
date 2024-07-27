@@ -23,7 +23,7 @@
 // https://github.com/google/transit/tree/master/gtfs-realtime
 
 syntax = "proto2";
-option go_package = "github.com/fyrtax/gtfs_proxy";
+option go_package = "github.com/fyrtax/gtfs2json";
 option java_package = "com.google.transit.realtime";
 package transit_realtime;
 
