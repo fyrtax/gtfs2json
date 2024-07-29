@@ -25,3 +25,4 @@ go.work
 /gtfs_rf_files
 cli
 webserver
+/build
