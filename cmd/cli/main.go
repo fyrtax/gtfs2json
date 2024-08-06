@@ -1,9 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	gtfs "gtfs-proxy"
 	"os"
@@ -41,15 +41,25 @@ func main() {
 		exitWithError("Error reading input file", err)
 	}
 
-	tripUpdate := &gtfs.FeedMessage{}
-	if err := proto.Unmarshal(data, tripUpdate); err != nil {
+	feedMessage := &gtfs.FeedMessage{}
+	if err := proto.Unmarshal(data, feedMessage); err != nil {
 		exitWithError("Error deserializing", err)
 	}
 
+	// custom marshaler to use enum instead of numbers
+	marshaler := protojson.MarshalOptions{
+		UseProtoNames:   true,
+		UseEnumNumbers:  false,
+		EmitUnpopulated: false,
+	}
+
+	jsonData, err := marshaler.Marshal(feedMessage)
+	if err != nil {
+		exitWithError("Error encoding to JSON", err)
+	}
+
 	if outputFile == "" {
-		if err := json.NewEncoder(os.Stdout).Encode(tripUpdate); err != nil {
-			exitWithError("Error encoding to JSON", err)
-		}
+		fmt.Println(string(jsonData))
 		return
 	}
 
@@ -64,8 +74,9 @@ func main() {
 		}
 	}(file)
 
-	if err := json.NewEncoder(file).Encode(tripUpdate); err != nil {
-		exitWithError("Error encoding to JSON", err)
+	_, err = file.Write(jsonData)
+	if err != nil {
+		exitWithError("Error writing to output file", err)
 	}
 }
 
