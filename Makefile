@@ -4,9 +4,6 @@ PROJECT_NAME := gtfs2json
 # Version - This will be overridden by the Git tag in the CI workflow
 VERSION := dev
 
-# Main Go files
-CLI_MAIN := main.go
-
 # Build directory
 BUILD_DIR := build
 
@@ -34,12 +31,12 @@ build: cli
 cli:
 	@echo "Building CLI for current platform..."
 	@mkdir -p $(BUILD_DIR)
-	go build $(LDFLAGS) -o $(BUILD_DIR)/$(PROJECT_NAME)_cli $(CLI_MAIN)
+	go build $(LDFLAGS) -o $(BUILD_DIR)/$(PROJECT_NAME)_cli .
 
 static-cli:
 	@echo "Building statically linked CLI for current platform..."
 	@mkdir -p $(BUILD_DIR)
-	CGO_ENABLED=0 go build $(STATIC_LDFLAGS) -o $(BUILD_DIR)/$(PROJECT_NAME)_cli $(CLI_MAIN)
+	CGO_ENABLED=0 go build $(STATIC_LDFLAGS) -o $(BUILD_DIR)/$(PROJECT_NAME)_cli .
 
 release:
 	@echo "Building release binaries for all platforms with Version: $(VERSION)..."
@@ -52,7 +49,7 @@ release:
 			output_name="$${output_name}.exe"; \
 		fi; \
 		echo "Building for $$OS/$$ARCH -> $(BUILD_DIR)/release/$$output_name"; \
-		GOOS=$$OS GOARCH=$$ARCH CGO_ENABLED=0 go build $(STATIC_LDFLAGS) -o $(BUILD_DIR)/release/$$output_name $(CLI_MAIN); \
+		GOOS=$$OS GOARCH=$$ARCH CGO_ENABLED=0 go build $(STATIC_LDFLAGS) -o $(BUILD_DIR)/release/$$output_name .; \
 	done
 	@echo "Release binaries built in $(BUILD_DIR)/release/"
 
