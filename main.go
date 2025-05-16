@@ -5,14 +5,23 @@ import (
 	"fmt"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	gtfs "gtfs-proxy"
 	"os"
 )
 
-// how to generate gtfs-realtime.pb.go
-// wget https://raw.githubusercontent.com/google/transit/master/gtfs-realtime/proto/gtfs-realtime.proto
-// add option go_package = "github.com/fyrtax/gtfs2json"; to gtfs-realtime.proto
-// protoc --go_out=. --go_opt=paths=source_relative gtfs-realtime.proto
+/*
+How to generate gtfs-realtime.pb.go (linux)
+https://protobuf.dev/reference/go/go-generated-opaque/
+
+Make sure protoc is installed e.g. `protoc --version`
+# apt install protobuf-compiler
+Make sure $GOPATH is set e.g. by `echo $GOPATH`
+Get gtfs realtime .protoc file
+$ wget https://raw.githubusercontent.com/google/transit/master/gtfs-realtime/proto/gtfs-realtime.proto
+Install protoc plugin for golang
+$ go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+Generate go code
+$ protoc --proto_path=. --go_out=. --go_opt=paths=source_relative --go_opt=Mgtfs-realtime.proto=/main gtfs-realtime.proto
+*/
 
 func main() {
 	help := flag.Bool("h", false, "Display help")
@@ -41,7 +50,7 @@ func main() {
 		exitWithError("Error reading input file", err)
 	}
 
-	feedMessage := &gtfs.FeedMessage{}
+	feedMessage := &FeedMessage{}
 	if err := proto.Unmarshal(data, feedMessage); err != nil {
 		exitWithError("Error deserializing", err)
 	}
